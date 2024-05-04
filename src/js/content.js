@@ -38,7 +38,6 @@ const check_ads = (cached_url) => {
 }
 
 const check_interval = (cached_url, current_interval) => {
-    console.log("Checking" + current_interval);
     if (current_interval > MAX_MUTATE_INTERVAL)
         return;
     let old_cached_url = cached_url;
