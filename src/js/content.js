@@ -8,6 +8,8 @@ const SKIP_BUTTON_CLASSES = [
 ];
 
 const SKIPPED_ATTR_NAME = 'skipped_listener';
+const EMPTY_CACHED_URL = '';
+const YOUTUBE_HOST = 'www.youtube.com';
 
 const hasAds = (adsModule) => {
     adsModule = adsModule[0];
@@ -54,7 +56,7 @@ const check_subscribe = (callback) => {
     }
 }
 
-const check_ads = (cached_url) => {
+const check_ads = (cached_url, cached_video_url, last_ad_blocked_time) => {
     const moviePlayer = document.getElementById('movie_player');
     if (!moviePlayer)
         return cached_url;
@@ -62,35 +64,65 @@ const check_ads = (cached_url) => {
     var adsModule = moviePlayer.getElementsByClassName('ytp-ad-module');
     if (videoStream.length && adsModule.length && hasAds(adsModule)) {
         const player = videoStream[0];
+        const hostname = location.hostname;
+        const video_url = location.search;
+        const currentTime = new Date().getTime();
         adsModule = adsModule[0];
-        if (isFinite(player.duration) && player.src != cached_url) {
+        
+        if (isFinite(player.duration) && 
+            player.src != cached_url && 
+                (
+                    YOUTUBE_HOST != hostname || player.currentTime > 1 || 
+                    (
+                        cached_video_url == video_url &&
+                        (currentTime - last_ad_blocked_time) > (10 * 1000)
+                    )
+                )
+            ) {
             cached_url = player.src;
+            if (cached_video_url != video_url) {
+                cached_video_url = video_url;
+                last_ad_blocked_time = new Date().getTime();
+            }
             player.currentTime = player.duration - 0.1;
             player.play();
         }
         SKIP_BUTTON_CLASSES.forEach(className => clickSkipButtons(adsModule, className))
     }
-    return cached_url;
+    return [cached_url, cached_video_url, last_ad_blocked_time];
 }
 
-const check_interval = (cached_url, current_interval) => {
+const check_interval = (cached_info, current_interval) => {
     if (current_interval > MAX_MUTATE_INTERVAL)
         return;
-    let old_cached_url = cached_url;
+    let old_cached_url = cached_info['cached_url'];
     check_subscribe(() => {
-        cached_url = check_ads(cached_url);
+        [cached_url, cached_video_url, last_ad_blocked_time] = check_ads(
+            cached_info['cached_url'], cached_info['cached_video_url'], cached_info['last_ad_blocked_time']
+        )
+        cached_info['cached_url'] = cached_url;
+        cached_info['cached_video_url'] = cached_video_url;
+        cached_info['last_ad_blocked_time'] = last_ad_blocked_time;
         if (old_cached_url == cached_url)
-            setTimeout(() => check_interval(cached_url, current_interval + 1), MUTATE_TIMEOUT);
+            setTimeout(
+                () => check_interval(
+                    cached_info, current_interval + 1
+                ), MUTATE_TIMEOUT
+            );
     });
 }
 
 const video_listener = () => {
-    let videos = document.getElementsByTagName('video')
-    
+    let videos = document.getElementsByTagName('video');
+    let cached_info = {
+        cached_url: EMPTY_CACHED_URL, 
+        cached_video_url: EMPTY_CACHED_URL, 
+        last_ad_blocked_time: 0
+    }
     const callback = (mutationList, observer) => {
         mutationList.forEach(mutation => {
             if (mutation.attributeName == "src") {
-                check_interval("", 0);
+                check_interval(cached_info, 0);
             }
         });
     };
@@ -107,7 +139,7 @@ const video_listener = () => {
     }
 }
 
-const detector = async (cached_url) => {
+const detector = async (cached_url, cached_video_url, last_ad_blocked_time) => {
     chrome.storage.sync.get('isOn', function (items) {
         var isOn = true;
         if (items.isOn !== undefined)
@@ -117,18 +149,18 @@ const detector = async (cached_url) => {
             try {
                 video_listener();
                 check_subscribe(() => {
-                    cached_url = check_ads(cached_url)
+                    [cached_url, cached_video_url, last_ad_blocked_time] = check_ads(cached_url, cached_video_url, last_ad_blocked_time)
                 })
             } catch (e) {
                 console.log(e);
             }
         }
 
-        setTimeout(() => detector(cached_url), INTERVAL_TIMEOUT);
+        setTimeout(() => detector(cached_url, cached_video_url, last_ad_blocked_time), INTERVAL_TIMEOUT);
     });
 }
 
-detector("");
+detector(EMPTY_CACHED_URL, EMPTY_CACHED_URL, 0);
 
 // render
 function toggle(injected) {
