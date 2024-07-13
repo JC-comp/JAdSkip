@@ -2,6 +2,7 @@ const INTERVAL_TIMEOUT = 500;
 const MUTATE_TIMEOUT = 50;
 const MUTATE_INTERVAL = 1000;
 const MAX_MUTATE_INTERVAL = MUTATE_INTERVAL / MUTATE_TIMEOUT;
+const PRE_ADS_WAITING_TIME = 1.1;
 
 const SKIP_BUTTON_CLASSES = [
     'ytp-ad-skip-button', 'ytp-ad-skip-button-modern'
@@ -72,7 +73,7 @@ const check_ads = (cached_url, cached_video_url, last_ad_blocked_time) => {
         if (isFinite(player.duration) && 
             player.src != cached_url && 
                 (
-                    YOUTUBE_HOST != hostname || player.currentTime > 1 || 
+                    YOUTUBE_HOST != hostname || player.currentTime >  PRE_ADS_WAITING_TIME || 
                     (
                         cached_video_url == video_url &&
                         (currentTime - last_ad_blocked_time) > (10 * 1000)
