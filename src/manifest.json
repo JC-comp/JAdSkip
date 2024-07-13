@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "JadSkip: Adblock for Youtube / Youtube Music",
-  "version": "1.4",
+  "version": "1.50",
   "description": "YouTube AdBlocker for Chrome.",
   "icons": {
        "16": "assets/icon-16.png",

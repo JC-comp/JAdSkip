@@ -8,6 +8,10 @@ const SKIP_BUTTON_CLASSES = [
     'ytp-ad-skip-button', 'ytp-ad-skip-button-modern'
 ];
 
+const SKIP_BUTTON_HOLDER_CLASSES = [
+    'ytp-ad-skip-button-slot'
+];
+
 const SKIPPED_ATTR_NAME = 'skipped_listener';
 const EMPTY_CACHED_URL = '';
 const YOUTUBE_HOST = 'www.youtube.com';
@@ -21,6 +25,11 @@ const clickSkipButtons = (adsModule, name) => {
     var buttons = adsModule.getElementsByClassName(name);
     for (let i = 0; i < buttons.length; i++)
         buttons[i].click();
+}
+
+const hasClickChecker = (adsModule, name) => {
+    var holders = adsModule.getElementsByClassName(name);
+    return holders.length > 0
 }
 
 const get_channel_id = () => {
@@ -88,7 +97,13 @@ const check_ads = (cached_url, cached_video_url, last_ad_blocked_time) => {
             player.currentTime = player.duration - 0.1;
             player.play();
         }
-        SKIP_BUTTON_CLASSES.forEach(className => clickSkipButtons(adsModule, className))
+        let safeToClick = true;
+        SKIP_BUTTON_HOLDER_CLASSES.forEach(className => {
+            if (hasClickChecker(adsModule, className))
+                safeToClick = false;
+        })
+        if (safeToClick)
+            SKIP_BUTTON_CLASSES.forEach(className => clickSkipButtons(adsModule, className))
     }
     return [cached_url, cached_video_url, last_ad_blocked_time];
 }
