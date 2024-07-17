@@ -1,15 +1,12 @@
-const INTERVAL_TIMEOUT = 500;
-const MUTATE_TIMEOUT = 50;
-const MUTATE_INTERVAL = 1000;
+const INTERVAL_TIMEOUT = 1000;
+const MUTATE_TIMEOUT = 500;
+const MUTATE_INTERVAL = 3000;
 const MAX_MUTATE_INTERVAL = MUTATE_INTERVAL / MUTATE_TIMEOUT;
 const PRE_ADS_WAITING_TIME = 1.1;
 
 const SKIP_BUTTON_CLASSES = [
-    'ytp-ad-skip-button', 'ytp-ad-skip-button-modern'
-];
-
-const SKIP_BUTTON_HOLDER_CLASSES = [
-    'ytp-ad-skip-button-slot'
+    'ytp-ad-skip-button', 'ytp-ad-skip-button-modern',
+    'ytp-skip-ad-button', 'ytp-skip-ad-button-modern'
 ];
 
 const SKIPPED_ATTR_NAME = 'skipped_listener';
@@ -25,11 +22,6 @@ const clickSkipButtons = (adsModule, name) => {
     var buttons = adsModule.getElementsByClassName(name);
     for (let i = 0; i < buttons.length; i++)
         buttons[i].click();
-}
-
-const hasClickChecker = (adsModule, name) => {
-    var holders = adsModule.getElementsByClassName(name);
-    return holders.length > 0
 }
 
 const get_channel_id = () => {
@@ -50,35 +42,34 @@ const get_channel_id = () => {
     return channel_id;
 }
 
-const check_subscribe = (callback) => {
+const check_subscribe = async (callback) => {
     var channel_id = get_channel_id();
     if (channel_id == null) {
-        callback();
+        await callback();
     } else {
-        chrome.storage.sync.get({subscribes: {}}, function (result) {
+        chrome.storage.sync.get({subscribes: {}}, async function (result) {
             var subscribes = result.subscribes;
             if (subscribes[channel_id] === true) {
                 // pass
             } else {
-                callback();
+                await callback();
             }
         });
     }
 }
 
-const check_ads = (cached_url, cached_video_url, last_ad_blocked_time) => {
+const check_ads = async (cached_url, cached_video_url, last_ad_blocked_time) => {
     const moviePlayer = document.getElementById('movie_player');
     if (!moviePlayer)
-        return cached_url;
+        return [cached_url, cached_video_url, last_ad_blocked_time];
     const videoStream = moviePlayer.getElementsByClassName('video-stream');
     var adsModule = moviePlayer.getElementsByClassName('ytp-ad-module');
+    const hostname = location.hostname;
+    const video_url = location.search;
     if (videoStream.length && adsModule.length && hasAds(adsModule)) {
-        const player = videoStream[0];
-        const hostname = location.hostname;
-        const video_url = location.search;
+        const player = videoStream[0];    
         const currentTime = new Date().getTime();
         adsModule = adsModule[0];
-        
         if (isFinite(player.duration) && 
             player.src != cached_url && 
                 (
@@ -89,20 +80,36 @@ const check_ads = (cached_url, cached_video_url, last_ad_blocked_time) => {
                     )
                 )
             ) {
-            cached_url = player.src;
             if (cached_video_url != video_url) {
                 cached_video_url = video_url;
                 last_ad_blocked_time = new Date().getTime();
             }
-            player.currentTime = player.duration - 0.1;
+            if (player.duration > 16 && player.currentTime < 7.5)
+                player.currentTime += 5;
+            else {
+                cached_url = player.src;
+                player.currentTime = player.duration - 0.1;
+            }
             player.play();
         }
-        let safeToClick = true;
-        SKIP_BUTTON_HOLDER_CLASSES.forEach(className => {
-            if (hasClickChecker(adsModule, className))
-                safeToClick = false;
-        })
-        if (safeToClick)
+        var actualCode = `
+        if (document.getElementById('ytd-player')?.getPlayerPromise) {
+            document.getElementById('ytd-player').getPlayerPromise().then(player => {
+                player.getPlayerResponse()?.adSlots?.forEach(e=>{
+                    let triggers = e.adSlotRenderer.fulfillmentContent.fulfilledLayout?.playerBytesAdLayoutRenderer?.layoutExitSkipTriggers;
+                    if (!triggers)
+                        return
+                    triggers.forEach(t=>{
+                        player.onAdUxClicked("skip-button", t.skipRequestedTrigger?.triggeringLayoutId)
+                    })
+                })
+            });
+        }
+        `;
+        document.documentElement.setAttribute('onreset', actualCode);
+        document.documentElement.dispatchEvent(new CustomEvent('reset'));
+        document.documentElement.removeAttribute('onreset');
+        if (YOUTUBE_HOST != hostname)
             SKIP_BUTTON_CLASSES.forEach(className => clickSkipButtons(adsModule, className))
     }
     return [cached_url, cached_video_url, last_ad_blocked_time];
@@ -112,14 +119,17 @@ const check_interval = (cached_info, current_interval) => {
     if (current_interval > MAX_MUTATE_INTERVAL)
         return;
     let old_cached_url = cached_info['cached_url'];
-    check_subscribe(() => {
-        [cached_url, cached_video_url, last_ad_blocked_time] = check_ads(
+    check_subscribe(async () => {
+        await check_ads(
             cached_info['cached_url'], cached_info['cached_video_url'], cached_info['last_ad_blocked_time']
-        )
-        cached_info['cached_url'] = cached_url;
-        cached_info['cached_video_url'] = cached_video_url;
-        cached_info['last_ad_blocked_time'] = last_ad_blocked_time;
-        if (old_cached_url == cached_url)
+        ).then(result=>{
+            let [cached_url, cached_video_url, last_ad_blocked_time] = result;
+            cached_info['cached_url'] = cached_url;
+            cached_info['cached_video_url'] = cached_video_url;
+            cached_info['last_ad_blocked_time'] = last_ad_blocked_time;
+        })
+        
+        if (old_cached_url == cached_info['cached_url'])
             setTimeout(
                 () => check_interval(
                     cached_info, current_interval + 1
@@ -156,7 +166,7 @@ const video_listener = () => {
 }
 
 const detector = async (cached_url, cached_video_url, last_ad_blocked_time) => {
-    chrome.storage.sync.get('isOn', function (items) {
+    chrome.storage.sync.get('isOn', async function (items) {
         var isOn = true;
         if (items.isOn !== undefined)
             isOn = items.isOn;
@@ -164,8 +174,11 @@ const detector = async (cached_url, cached_video_url, last_ad_blocked_time) => {
         if (isOn) {
             try {
                 video_listener();
-                check_subscribe(() => {
-                    [cached_url, cached_video_url, last_ad_blocked_time] = check_ads(cached_url, cached_video_url, last_ad_blocked_time)
+                await check_subscribe(async () => {
+                    await check_ads(cached_url, cached_video_url, last_ad_blocked_time)
+                    .then(result=>{
+                        [cached_url, cached_video_url, last_ad_blocked_time] = result;
+                    })
                 })
             } catch (e) {
                 console.log(e);
