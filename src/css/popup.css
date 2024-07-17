@@ -1,11 +1,29 @@
 body, html {
   font-family: 'Arial', sans-serif;
   width: 400px;
-  background-color: #FFF;
+  background-color: #030303;
+  color: #f1f1f1;
   text-align: center;
+}
+
+a {
+  color: #3ea6ff;
 }
 
 footer {
   width: 100%;
-  color: #555;
+}
+
+.switch {
+  display: flex;
+  justify-content: center;
+}
+
+.page-holder {
+  margin: auto;
+  width: 50%;
+}
+
+.logo {
+  height: 30px;
 }

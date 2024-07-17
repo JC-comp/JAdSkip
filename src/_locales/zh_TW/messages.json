@@ -1,0 +1,26 @@
+{
+    "brand": {
+        "message": "JadSkip: YouTube 和 YouTube Music 的廣告攔截器"
+    },
+    "brand_desc": {
+        "message": "在 YouTube 和 YouTube Music 上阻擋廣告，使用前請確保停用所有其他擴充功能。"
+    },
+    "off": {
+        "message": "關"
+    },
+    "on": {
+        "message": "開"
+    },
+    "manage": {
+        "message": "管理"
+    },
+    "manage_desc": {
+        "message": "依照頻道 <a href=\"https://www.youtube.com/feed/channels\" target=\"_blank\">管理</a> 廣告投放"
+    },
+    "report_chrome_desc": {
+        "message": "<p>在 <a href=\"https://chromewebstore.google.com/detail/kcgbbbjpeiaaiokphejajemebphalmii/support\" target=\"_blank\">Chrome線上應用程式商店</a> 上回報問題</p>"
+    },
+    "report_github_desc": {
+        "message": "<p>在 <a href=\"https://github.com/JC-comp/JAdSkip/issues\" target=\"_blank\">GitHub</a> 上回報問題</p>"
+    }
+}
