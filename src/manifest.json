@@ -34,6 +34,7 @@
             ],
             "js": [
                 "js/utils.js",
+                "js/core/logger.js",
                 "js/subscribe/content_script.js",
                 "js/core/content_script.js"
             ]
@@ -44,6 +45,7 @@
             ],
             "js": [
                 "js/core/function.js",
+                "js/core/logger.js",
                 "js/core/yt/content.js"
             ],
             "world": "MAIN",
@@ -55,6 +57,7 @@
             ],
             "js": [
                 "js/utils.js",
+                "js/core/logger.js",
                 "js/core/content_script.js"
             ]
         },
@@ -64,6 +67,7 @@
             ],
             "js": [
                 "js/core/function.js",
+                "js/core/logger.js",
                 "js/core/ytm/content.js"
             ],
             "world": "MAIN"

@@ -3,23 +3,38 @@
     const tryClickSkipButton = async () => {
         if (!getAdPlayer())
             return;
-        if (document.getElementById('ytd-player')?.getPlayerPromise) {
-            var player = await document.getElementById('ytd-player').getPlayerPromise();
-            const clickTriggers = (slot) => {
-                let triggers = slot.adSlotRenderer.fulfillmentContent.fulfilledLayout?.playerBytesAdLayoutRenderer?.layoutExitSkipTriggers;
-                if (!triggers)
-                    return
-                triggers.forEach(t => {
-                    player.onAdUxClicked("skip-button", t.skipRequestedTrigger?.triggeringLayoutId)
-                })
-            };
+        var getPlayerPromise = document.getElementById('movie_player')?.getPlayerPromise;
+        if (!getPlayerPromise) {
+            logMessage('Unable to get player');
+            return;
+        }
+
+        var player = await getPlayerPromise();
+        const clickTriggers = (slot) => {
+            let triggers = slot.adSlotRenderer.fulfillmentContent.fulfilledLayout?.playerBytesAdLayoutRenderer?.layoutExitSkipTriggers;
+            if (!triggers)
+                return
+            triggers.forEach(t => {
+                player.onAdUxClicked("skip-button", t.skipRequestedTrigger?.triggeringLayoutId)
+            })
+        };
+        if (adSlots.length == 0) {
+            logMessage('No ad slots captured yet');
+        } else {
+            logMessage(`Trying captured ad slots: ${adSlots.length}`);
             adSlots.forEach(slot => {
                 clickTriggers(slot);
             });
-            player.getPlayerResponse()?.adSlots?.forEach(slot => {
-                clickTriggers(slot);
-            });
         }
+        var playerSlots = player.getPlayerResponse()?.adSlots;
+        if (!playerSlots) {
+            logMessage('No ad slots found in player response');
+            return;
+        }
+        logMessage(`Trying ad slots from player response: ${playerSlots.length}`);
+        playerSlots.forEach(slot => {
+            clickTriggers(slot);
+        });
     }
 
     var lastBlockedTime = 0;
@@ -28,17 +43,25 @@
         const player = getAdPlayer();
         if (!player)
             return;
-        if (
-            isFinite(player.duration) &&
-            player.src != lastBlockedAdURL && // Prevent skipping the same ad multiple times
-            (
-                player.currentTime > player.duration * 0.4 // Prevent abnormal skip
-            )
-        ) {
-            player.currentTime = player.duration - 0.1;
-            lastBlockedAdURL = player.src;
-            lastBlockedTime = Date.now();
+        logMessage(`Processing ad "${player.src}" at ${player.currentTime} / ${player.duration}`);
+        if (!isFinite(player.duration)) {
+            logMessage('Ad duration is not finite, skipping ad skip');
+            return;
         }
+        if (player.src == lastBlockedAdURL) {
+            logMessage(`Skipping already processed ad`);
+            return;
+        }
+        var threshold = player.duration * 0.4;
+        if (player.currentTime < threshold) {
+            logMessage(`Ad is not ready to be skipped, current time: ${player.currentTime}, threshold: ${threshold}`);
+            return;
+        }
+        var target = player.duration - 0.1;
+        logMessage(`Skipping ad from ${player.currentTime} to ${target}`);
+        player.currentTime = target;
+        lastBlockedAdURL = player.src;
+        lastBlockedTime = Date.now();
     };
 
     const check_ads = async () => {
@@ -50,6 +73,7 @@
     const checkIdle = async () => {
         var button = null;
         var buttons = document.querySelectorAll('#confirm-button');
+        logMessage(`Found ${buttons.length} confirm buttons`);
         for (var i = 0; i < buttons.length; i++) {
             if (buttons[i].checkVisibility()) {
                 button = buttons[i];
@@ -58,11 +82,13 @@
         }
         if (!button) return;
         var actions = button.data?.serviceEndpoint?.signalServiceEndpoint?.actions;
+        logMessage(`Actions found: ${actions ? actions.length : 0}`);
         if (!actions) return;
         actions.forEach(action => {
             var signal = action.signalAction?.signal;
             if (!signal) return;
             if (signal == 'ACKNOWLEDGE_YOUTHERE') {
+                logMessage(`Clicking confirm button for youthere`);
                 button.click();
             }
         });
@@ -79,13 +105,16 @@
                 try {
                     var response = JSON.parse(this.response);
                     if ('adThrottled' in response) {
+                        logMessage(`Ad throttling response detected: ${response.adThrottled}`);
                         if (blockEnabled) {
+                            logMessage(`Replacing ad throttling response`);
                             Object.defineProperty(this, 'response', {
                                 writable: true
                             });
                             response.adThrottled = true;
                             this.response = JSON.stringify(response);
                         } else if (response.adSlots) {
+                            logMessage(`Ad slots detected: ${response.adSlots.length}`);
                             adSlots = response.adSlots;
                         }
                     }
@@ -99,6 +128,8 @@
     }
 
     window.addEventListener('message', async (event) => {
+        if (event.data.origin === 'main') return; // Ignore self-originated messages
+        logMessage(`Received action: ${JSON.stringify(event.data)}`);
         if (event.data.action === 'resetAdBlockState') {
             lastBlockedTime = 0;
             lastBlockedAdURL = '';
@@ -110,5 +141,4 @@
             blockEnabled = event.data.isEnabled;
         }
     });
-
 })();

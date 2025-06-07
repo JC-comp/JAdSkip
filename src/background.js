@@ -1,3 +1,15 @@
+function broadcastStatusUpdate(action, args) {
+    // Broadcast a status update to all tabs
+    chrome.tabs.query({}, function (tabs) {
+        tabs.forEach(tab => {
+            chrome.tabs.sendMessage(tab.id, {
+                action: action,
+                ...args,
+            });
+        });
+    });
+}
+
 function getSubscribedChannels() {
     return new Promise((resolve, _) => {
         chrome.storage.sync.get({ subscribes: {} }, function (result) {
@@ -28,6 +40,15 @@ function checkIfServiceEnabled(serviceName) {
             if (result[serviceName] !== undefined)
                 isEnabled = result[serviceName];
             resolve(isEnabled);
+        });
+    });
+}
+
+function checkIfDebugModeEnabled() {
+    // Check if debug mode is enabled
+    return new Promise((resolve, _) => {
+        chrome.storage.sync.get({ debugMode: false }, function (result) {
+            resolve(result.debugMode);
         });
     });
 }
@@ -83,14 +104,31 @@ function handleServiceStatusUpdate(request, sender, sendResponse) {
     chrome.storage.sync.set({ [serviceName]: isEnabled }, function () {
         sendResponse({ success: true });
     });
-    chrome.tabs.query({}, function (tabs) {
-        tabs.forEach(tab => {
-            chrome.tabs.sendMessage(tab.id, {
-                action: 'adblock-service-status-changed',
-                serviceName: serviceName,
-                isEnabled: isEnabled,
-            });
-        });
+    broadcastStatusUpdate(
+        'adblock-service-status-changed', {
+        serviceName: serviceName,
+        isEnabled: isEnabled,
+    }
+    );
+}
+
+function handleDebugModeQuery(request, sender, sendResponse) {
+    // handle the debug mode query
+    checkIfDebugModeEnabled().then(isDebugModeEnabled => {
+        sendResponse({ success: true, isDebugModeEnabled: isDebugModeEnabled });
+    });
+}
+
+function handleDebugModeUpdate(request, sender, sendResponse) {
+    // handle the debug mode update
+    var isDebugModeEnabled = request.isDebugModeEnabled;
+    chrome.storage.sync.set({ debugMode: isDebugModeEnabled }, function () {
+        sendResponse({ success: true });
+        broadcastStatusUpdate(
+            'debug-mode-updated', {
+            isDebugModeEnabled: isDebugModeEnabled,
+        }
+        );
     });
 }
 
@@ -112,6 +150,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     } else if (request.action === 'updateServiceStatus') {
         // Update the service status
         handleServiceStatusUpdate(request, sender, sendResponse);
+        return true;
+    } else if (request.action === 'isDebugModeEnabled') {
+        handleDebugModeQuery(request, sender, sendResponse);
+        return true;
+    } else if (request.action === 'updateDebugMode') {
+        handleDebugModeUpdate(request, sender, sendResponse);
         return true;
     }
 });
