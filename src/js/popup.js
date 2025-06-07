@@ -73,6 +73,12 @@ function setUpDebugButton() {
     });
 }
 
+function setUpVersion() {
+    var versionElement = document.getElementById('version');
+    var manifest = chrome.runtime.getManifest()
+    versionElement.innerText = manifest.version;
+}
+
 function i18n() {
     document.querySelectorAll('[data-locale]').forEach(elem => {
         elem.innerHTML = chrome.i18n.getMessage(elem.dataset.locale)
@@ -81,6 +87,7 @@ function i18n() {
 
 document.addEventListener("DOMContentLoaded", () => {
     i18n();
+    setUpVersion();
 
     setUpPage('yt');
     setUpPage('ytm');

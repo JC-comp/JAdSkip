@@ -1,0 +1,55 @@
+name: "Bug Report"
+description: "Report a bug or unexpected behavior."
+title: "Bug: "
+body:
+- type: textarea
+  id: bugDescription
+  attributes:
+    label: Describe the bug
+    description: A clear and concise description of what the bug is.
+  validations:
+    required: true
+
+- type: input
+  id: browserInfo
+  attributes:
+    label: Browser
+    description: Information about the browser you are using.
+    placeholder: "Chrome, Firefox, Safari, etc."
+  validations:
+    required: true
+
+- type: input
+  id: version
+  attributes:
+    label: Extension Version
+    description: |
+      The version of the extension you are using.
+      You can find this in the extension settings or the popup window.
+    placeholder: "3.0"
+  validations:
+    required: true
+
+- type: textarea
+  id: log
+  attributes:
+    label: Debug Log
+    description: |
+      1. Open the video page where you encountered the issue.
+      2. After the issue occurs, open the extension popup.
+      3. Click on the "Copy Debug Log" button.
+      4. Paste the log below.
+    placeholder: |
+      [2025-01-01T00:00:00.000Z] Page navigation detected, re-registering video listener
+      [2025-01-01T00:00:00.000Z] Video found in player, registering listener
+      ...
+  validations:
+    required: true
+
+- type: textarea
+  id: additionalInfo
+  attributes:
+    label: Additional Information
+    description: Any additional information that might help us understand the issue.
+  validations:
+    required: false
