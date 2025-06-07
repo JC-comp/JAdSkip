@@ -1,45 +1,84 @@
 {
-  "manifest_version": 3,
-  "name": "__MSG_brand__",
-  "version": "2.1",
-  "description": "__MSG_brand_desc__",
-  "default_locale": "en",
-  "icons": {
-       "16": "assets/icon-16.png",
-       "48": "assets/icon-48.png",
-      "128": "assets/icon-120.png"
-  },
-  "action": {
-    "default_icon": "assets/icon-120.png",
-    "default_popup": "html/popup.html"
-  },
-  "permissions": [
-    "storage"
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": [ "assets/*.png" ],
-      "matches": [ "https://www.youtube.com/*" ]
+    "manifest_version": 3,
+    "name": "__MSG_brand__",
+    "version": "3.0",
+    "description": "__MSG_brand_desc__",
+    "default_locale": "en",
+    "icons": {
+        "16": "assets/icon-16.png",
+        "48": "assets/icon-48.png",
+        "128": "assets/icon-120.png"
+    },
+    "action": {
+        "default_icon": "assets/icon-120.png",
+        "default_popup": "html/popup.html"
+    },
+    "permissions": [
+        "storage",
+        "tabs"
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "assets/*.png"
+            ],
+            "matches": [
+                "https://www.youtube.com/*"
+            ]
+        }
+    ],
+    "content_scripts": [
+        {
+            "matches": [
+                "https://www.youtube.com/*"
+            ],
+            "js": [
+                "js/utils.js",
+                "js/subscribe/content_script.js",
+                "js/core/content_script.js"
+            ]
+        },
+        {
+            "matches": [
+                "https://www.youtube.com/*"
+            ],
+            "js": [
+                "js/core/function.js",
+                "js/core/yt/content.js"
+            ],
+            "world": "MAIN",
+            "run_at": "document_start"
+        },
+        {
+            "matches": [
+                "https://music.youtube.com/*"
+            ],
+            "js": [
+                "js/utils.js",
+                "js/core/content_script.js"
+            ]
+        },
+        {
+            "matches": [
+                "https://music.youtube.com/*"
+            ],
+            "js": [
+                "js/core/function.js",
+                "js/core/ytm/content.js"
+            ],
+            "world": "MAIN"
+        },
+        {
+            "matches": [
+                "https://www.youtube.com/*"
+            ],
+            "css": [
+                "css/channel.css"
+            ]
+        }
+    ],
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
     }
-  ],
-  "content_scripts": [
-    {
-      "matches": ["https://www.youtube.com/*"],
-      "exclude_matches": [ "https://www.youtube.com/feed/channels" ],
-      "js": ["js/function.js", "js/yt/content.js", "js/content.js"]
-    },
-    {
-      "matches": ["https://music.youtube.com/*"],
-      "js": ["js/function.js", "js/ytm/content.js", "js/content.js"]
-    },
-    {
-      "matches": ["https://www.youtube.com/*"],
-      "css": ["css/channel.css"]
-    },
-    {
-      "matches": ["https://www.youtube.com/feed/channels"],
-      "js": ["js/function.js", "js/channel.js"],
-      "css": ["css/channel.css"]
-    }
-  ]
 }
