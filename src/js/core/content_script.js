@@ -137,6 +137,7 @@
     });
     if (window.navigation && window.navigation.addEventListener) {
         window.navigation.addEventListener('navigate', onNavigate);
+        onNavigate();
     } else {
         window.addEventListener('locationchange', onNavigate);
         window.addEventListener('yt-navigate-finish', onNavigate);
