@@ -26,3 +26,12 @@ const getAdPlayer = () => {
     logMessage('No ad player found');
     return null;
 }
+
+const clickTriggers = (player, slot) => {
+    let triggers = slot.adSlotRenderer.fulfillmentContent.fulfilledLayout?.playerBytesAdLayoutRenderer?.layoutExitSkipTriggers;
+    if (!triggers)
+        return
+    triggers.forEach(t => {
+        player.onAdUxClicked("skip-button", t.skipRequestedTrigger?.triggeringLayoutId)
+    })
+};

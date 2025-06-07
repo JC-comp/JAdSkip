@@ -76,6 +76,8 @@
         }
         video.setAttribute(SKIPPED_TAG_NAME, 1);
         video.addEventListener('pause', () => {
+            if (checkAdTimeout)
+                clearTimeout(checkAdTimeout);
             checkIdleInteraction(0);
         });
         video.addEventListener('play', () => {

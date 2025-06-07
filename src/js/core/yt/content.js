@@ -3,27 +3,23 @@
     const tryClickSkipButton = async () => {
         if (!getAdPlayer())
             return;
-        var getPlayerPromise = document.getElementById('movie_player')?.getPlayerPromise;
-        if (!getPlayerPromise) {
-            logMessage('Unable to get player');
+        var player = document.getElementById('movie_player');
+        if (!player) {
+            logMessage('Unable to find movie player');
             return;
         }
-
-        var player = await getPlayerPromise();
-        const clickTriggers = (slot) => {
-            let triggers = slot.adSlotRenderer.fulfillmentContent.fulfilledLayout?.playerBytesAdLayoutRenderer?.layoutExitSkipTriggers;
-            if (!triggers)
-                return
-            triggers.forEach(t => {
-                player.onAdUxClicked("skip-button", t.skipRequestedTrigger?.triggeringLayoutId)
-            })
-        };
+        if (player.getPlayerPromise) player = await player.getPlayerPromise();
+        if (!player.onAdUxClicked) {
+            logMessage('Player does not support ad UX clicks');
+            return;
+        }
+        
         if (adSlots.length == 0) {
             logMessage('No ad slots captured yet');
         } else {
             logMessage(`Trying captured ad slots: ${adSlots.length}`);
             adSlots.forEach(slot => {
-                clickTriggers(slot);
+                clickTriggers(player, slot);
             });
         }
         var playerSlots = player.getPlayerResponse()?.adSlots;
@@ -33,7 +29,7 @@
         }
         logMessage(`Trying ad slots from player response: ${playerSlots.length}`);
         playerSlots.forEach(slot => {
-            clickTriggers(slot);
+            clickTriggers(player, slot);
         });
     }
 
