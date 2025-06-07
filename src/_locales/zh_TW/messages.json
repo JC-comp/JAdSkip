@@ -14,6 +14,21 @@
     "manage": {
         "message": "管理"
     },
+    "debug_log": {
+        "message": "除錯日誌"
+    },
+    "log_not_found": {
+        "message": "找不到除錯日誌"
+    },
+    "copy_debug_log": {
+        "message": "複製除錯日誌"
+    },
+    "copied": {
+        "message": "已複製！"
+    },
+    "failed": {
+        "message": "失敗！"
+    },
     "manage_desc": {
         "message": "依照頻道 <a href=\"https://www.youtube.com/feed/channels\" target=\"_blank\">管理</a> 廣告投放"
     },

@@ -17,6 +17,21 @@
     "manage_desc": {
         "message": "<a href=\"https://www.youtube.com/feed/channels\" target=\"_blank\">Manage</a> ads on subscribed channels"
     },
+    "debug_log": {
+        "message": "Debug Log"
+    },
+    "log_not_found": {
+        "message": "Debug log not found"
+    },
+    "copy_debug_log": {
+        "message": "Copy Debug Log"
+    },
+    "copied": {
+        "message": "Copied!"
+    },
+    "failed": {
+        "message": "Failed!"
+    },
     "report_chrome_desc": {
         "message": "<p>Report issues on <a href=\"https://chromewebstore.google.com/detail/kcgbbbjpeiaaiokphejajemebphalmii/support\" target=\"_blank\">Chrome Web Store</a></p>"
     },

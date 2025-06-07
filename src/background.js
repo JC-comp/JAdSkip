@@ -157,5 +157,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     } else if (request.action === 'updateDebugMode') {
         handleDebugModeUpdate(request, sender, sendResponse);
         return true;
+    } else {
+        sendResponse({ success: false, message: 'Unknown action' });
+        return true;
     }
 });

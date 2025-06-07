@@ -133,6 +133,11 @@
             checkAdPresence(0);
             sendResponse({ success: true });
             return true;
+        } else if (request.action === 'copyDebugLog') {
+            sendResponse({ success: true, message: logger.toString() });
+            return true;
+        } else {
+            sendResponse({ success: false, message: 'Unknown action' });
         }
     });
     if (window.navigation && window.navigation.addEventListener) {

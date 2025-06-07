@@ -27,3 +27,25 @@ footer {
 .logo {
   height: 30px;
 }
+
+button {
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+button.success {
+  background-color: #4caf50;
+  color: white;
+}
+
+button.error {
+  background-color: #ff4d4d;
+  color: white;
+}
+
+textarea {
+  width: 80%;
+}
