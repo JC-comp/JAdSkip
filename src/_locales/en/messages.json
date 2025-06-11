@@ -21,7 +21,7 @@
         "message": "Debug Log"
     },
     "log_not_found": {
-        "message": "Debug log not found"
+        "message": "Debug log not found on this page."
     },
     "copy_debug_log": {
         "message": "Copy Debug Log"

@@ -1,10 +1,12 @@
 function broadcastStatusUpdate(action, args) {
     // Broadcast a status update to all tabs
-    chrome.tabs.query({}, function (tabs) {
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
         tabs.forEach(tab => {
             chrome.tabs.sendMessage(tab.id, {
                 action: action,
                 ...args,
+            }, function (response) {
+                if (chrome.runtime.lastError) {}
             });
         });
     });
@@ -69,13 +71,7 @@ function handleSubscriptionUpdate(request, sender, sendResponse) {
         subscribes[channelId] = isSubscribed;
         chrome.storage.sync.set({ subscribes: subscribes }, function () {
             sendResponse({ success: true });
-            chrome.tabs.query({}, function (tabs) {
-                tabs.forEach(tab => {
-                    chrome.tabs.sendMessage(tab.id, {
-                        action: 'adblock-channel-subscription-updated',
-                    });
-                });
-            });
+            broadcastStatusUpdate('adblock-channel-subscription-updated', {});
         });
     }).catch(error => {
         sendResponse({ success: false, error: error });

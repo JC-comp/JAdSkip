@@ -17,43 +17,59 @@
     var checkIdleTimeout = null;
     function checkAdPresence(retry) {
         if (retry >= MAX_MUTATE_RETRY) return;
-        chrome.runtime.sendMessage({
-            action: 'shouldBlockAds',
-            serviceName: getServiceName(),
-            channelId: getChannelId()
-        }, function (response) {
-            logger.log(`Checking ad presence, retry: ${retry}, shouldBlockAds: ${JSON.stringify(response)}`);
-            if (!response.success) return;
-            if (!response.shouldBlockAds) return;
-            window.postMessage({
-                action: 'checkAds',
-                origin: 'extension'
+        try {
+            chrome.runtime.sendMessage({
+                action: 'shouldBlockAds',
+                serviceName: getServiceName(),
+                channelId: getChannelId()
+            }, function (response) {
+                if (chrome.runtime.lastError) {
+                    logger.error(`Error checking ad presence: ${chrome.runtime.lastError.message}`);
+                    return;
+                }
+                logger.log(`Checking ad presence, retry: ${retry}, shouldBlockAds: ${JSON.stringify(response)}`);
+                if (!response.success) return;
+                if (!response.shouldBlockAds) return;
+                window.postMessage({
+                    action: 'checkAds',
+                    origin: 'extension'
+                });
+                if (checkAdTimeout) clearTimeout(checkAdTimeout);
+                checkAdTimeout = setTimeout(() => {
+                    checkAdPresence(retry + 1);
+                }, MUTATE_INTERVAL);
             });
-            if (checkAdTimeout) clearTimeout(checkAdTimeout);
-            checkAdTimeout = setTimeout(() => {
-                checkAdPresence(retry + 1);
-            }, MUTATE_INTERVAL);
-        });
+        } catch (error) {
+            logger.log(`Error checking ad presence: ${error.message}`);
+        }
     }
     const checkIdleInteraction = (retry) => {
         if (retry >= MAX_MUTATE_RETRY) return;
-        chrome.runtime.sendMessage({
-            action: 'shouldBlockAds',
-            serviceName: getServiceName(),
-            channelId: getChannelId()
-        }, function (response) {
-            logger.log(`Checking idle interaction, retry: ${retry}, shouldBlockAds: ${JSON.stringify(response)}`);
-            if (!response.success) return;
-            if (!response.shouldBlockAds) return;
-            window.postMessage({
-                action: 'checkIdleInteraction',
-                origin: 'extension'
+        try {
+            chrome.runtime.sendMessage({
+                action: 'shouldBlockAds',
+                serviceName: getServiceName(),
+                channelId: getChannelId()
+            }, function (response) {
+                if (chrome.runtime.lastError) {
+                    logger.error(`Error checking idle interaction: ${chrome.runtime.lastError.message}`);
+                    return;
+                }
+                logger.log(`Checking idle interaction, retry: ${retry}, shouldBlockAds: ${JSON.stringify(response)}`);
+                if (!response.success) return;
+                if (!response.shouldBlockAds) return;
+                window.postMessage({
+                    action: 'checkIdleInteraction',
+                    origin: 'extension'
+                });
+                if (checkIdleTimeout) clearTimeout(checkIdleTimeout);
+                checkIdleTimeout = setTimeout(() => {
+                    checkIdleInteraction(retry + 1);
+                }, MUTATE_INTERVAL);
             });
-            if (checkIdleTimeout) clearTimeout(checkIdleTimeout);
-            checkIdleTimeout = setTimeout(() => {
-                checkIdleInteraction(retry + 1);
-            }, MUTATE_INTERVAL);
-        });
+        } catch (error) {
+            logger.log(`Error checking idle interaction: ${error.message}`);
+        }
     }
 
     // Registration functions
@@ -149,23 +165,35 @@
     }
 
     // Initial registration
-    chrome.runtime.sendMessage({
-        action: 'isServiceEnabled',
-        serviceName: getServiceName()
-    }, function (response) {
-        if (response.success) {
-            window.postMessage({
-                action: 'setAdBlockEnabled',
-                origin: 'extension',
-                isEnabled: response.isEnabled
-            });
-        }
-    });
-    chrome.runtime.sendMessage({
-        action: 'isDebugModeEnabled'
-    }, function (response) {
-        if (response.success) {
-            logger.setDebugMode(response.isDebugModeEnabled);
-        }
-    });
+    try {
+        chrome.runtime.sendMessage({
+            action: 'isServiceEnabled',
+            serviceName: getServiceName()
+        }, function (response) {
+            if (!chrome.runtime.lastError) {
+                if (response.success) {
+                    window.postMessage({
+                        action: 'setAdBlockEnabled',
+                        origin: 'extension',
+                        isEnabled: response.isEnabled
+                    });
+                }
+            }
+        });
+    } catch (error) {
+        logger.log(`Error checking service status: ${error.message}`);
+    }
+    try {
+        chrome.runtime.sendMessage({
+            action: 'isDebugModeEnabled'
+        }, function (response) {
+            if (!chrome.runtime.lastError) {
+                if (response.success) {
+                    logger.setDebugMode(response.isDebugModeEnabled);
+                }
+            }
+        });
+    } catch (error) {
+        logger.log(`Error checking debug mode: ${error.message}`);
+    }
 })();

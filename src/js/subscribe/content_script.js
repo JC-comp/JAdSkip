@@ -57,14 +57,18 @@
         if (renderVideoTimeout)
             clearTimeout(renderVideoTimeout);
         removeAllSubscriptionToggles();
-        chrome.runtime.sendMessage({
-            action: 'isServiceEnabled',
-            serviceName: getServiceName()
-        }, function (response) {
-            if (!response.success || !response.isEnabled) return;
-            renderChannel(0);
-            renderVideo(0);
-        });
+        try {
+            chrome.runtime.sendMessage({
+                action: 'isServiceEnabled',
+                serviceName: getServiceName()
+            }, function (response) {
+                if (chrome.runtime.lastError || !response.success || !response.isEnabled) return;
+                renderChannel(0);
+                renderVideo(0);
+            });
+        } catch (error) {
+            console.log(`Error checking service status: ${error.message}`);
+        }
     };
 
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {

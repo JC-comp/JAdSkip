@@ -11,27 +11,33 @@ function updateSubscriptionToggle(injected, channelId) {
     enabled_img.classList.remove('hide');
     enabled_img.classList.remove('show');
 
-    chrome.runtime.sendMessage({
-        action: 'isChannelSubscribed',
-        channelId: channelId
-    }, function (response) {
-        if (response.success) {
-            var isSubscribed = response.isSubscribed;
-            if (isSubscribed) {
-                enabled_img.classList.add('hide');
-                disabled_img.classList.add('show');
-                checkbox.checked = 0;
-            } else {
-                enabled_img.classList.add('show');
-                disabled_img.classList.add('hide');
-                checkbox.checked = 1;
-                window.postMessage({
-                    action: 'checkAds',
-                    origin: 'extension'
-                });
+    try {
+        chrome.runtime.sendMessage({
+            action: 'isChannelSubscribed',
+            channelId: channelId
+        }, function (response) {
+            if (chrome.runtime.lastError)
+                return;
+            if (response.success) {
+                var isSubscribed = response.isSubscribed;
+                if (isSubscribed) {
+                    enabled_img.classList.add('hide');
+                    disabled_img.classList.add('show');
+                    checkbox.checked = 0;
+                } else {
+                    enabled_img.classList.add('show');
+                    disabled_img.classList.add('hide');
+                    checkbox.checked = 1;
+                    window.postMessage({
+                        action: 'checkAds',
+                        origin: 'extension'
+                    });
+                }
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.log(`Error updating subscription toggle: ${error.message}`);
+    }
 }
 
 function createSubscriptionToggle(channelId) {
@@ -47,14 +53,21 @@ function createSubscriptionToggle(channelId) {
             <img id="enabled_img"class="hide" src="chrome-extension://${chrome.runtime.id}/assets/icon-120.png">
         </div>`;
     var checkbox = injected.querySelector('#status');
-    checkbox.addEventListener('change', function () {
-        chrome.runtime.sendMessage({
-            action: 'updateSubscription',
-            channelId: channelId,
-            isSubscribed: !checkbox.checked
-        }, function (response) {
-            updateSubscriptionToggle(injected, channelId);
-        });
+    checkbox.addEventListener('change', function (e) {
+        try {
+            chrome.runtime.sendMessage({
+                action: 'updateSubscription',
+                channelId: channelId,
+                isSubscribed: !checkbox.checked
+            }, function (response) {
+                if (chrome.runtime.lastError || !response.success)
+                    e.target.checked = !e.target.checked;
+                updateSubscriptionToggle(injected, channelId);
+            });
+        } catch (error) {
+            console.log(`Error updating subscription: ${error.message}`);
+            e.target.checked = !e.target.checked;
+        }
     });
     updateSubscriptionToggle(injected, channelId);
     return injected;

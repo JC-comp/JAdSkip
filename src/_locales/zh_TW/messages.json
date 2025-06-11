@@ -18,7 +18,7 @@
         "message": "除錯日誌"
     },
     "log_not_found": {
-        "message": "找不到除錯日誌"
+        "message": "此網頁上找不到除錯日誌"
     },
     "copy_debug_log": {
         "message": "複製除錯日誌"

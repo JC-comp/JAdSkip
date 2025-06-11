@@ -2,11 +2,15 @@ function setUpPage(page) {
     let key = 'is' + page + 'On';
 
     var checkbox = document.getElementById(page + '_status');
-    checkbox.addEventListener('change', function () {
+    checkbox.addEventListener('change', function (e) {
         chrome.runtime.sendMessage({
             action: 'updateServiceStatus',
             serviceName: key,
             isEnabled: this.checked
+        }, function (response) {
+            if (!chrome.runtime.lastError && response && response.success)
+                return;
+            e.target.checked = !e.target.checked; // Revert checkbox state if error occurs
         });
     });
 
@@ -14,8 +18,10 @@ function setUpPage(page) {
         action: 'isServiceEnabled',
         serviceName: key
     }, function (response) {
-        if (response.success) {
-            checkbox.checked = response.isEnabled;
+        if (!chrome.runtime.lastError) {
+            if (response.success) {
+                checkbox.checked = response.isEnabled;
+            }
         }
     });
 }
@@ -46,9 +52,12 @@ function refreshLog() {
         chrome.tabs.sendMessage(tabs[0].id, {
             action: 'copyDebugLog'
         }, function (response) {
-            if (response && response.success)
-                logArea.value = response.message;
+            if (!chrome.runtime.lastError) {
+                if (response && response.success)
+                    logArea.value = response.message;    
+            }
         });
+        
     });
 }
 
