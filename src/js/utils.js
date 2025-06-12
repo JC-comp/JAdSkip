@@ -70,6 +70,22 @@ function createSubscriptionToggle(channelId) {
         }
     });
     updateSubscriptionToggle(injected, channelId);
+    var imgs = injected.querySelectorAll('img');
+    imgs.forEach(img => {
+        img.addEventListener('click', function () {
+            try {
+                chrome.runtime.sendMessage({
+                    action: 'openPopup'
+                }, function (response) {
+                    if (chrome.runtime.lastError) {
+                        console.log('Failed to open popup:', chrome.runtime.lastError.message);
+                    }
+                });
+            } catch (error) {
+                console.log(`Error opening popup: ${error.message}`);
+            }
+        });
+    });
     return injected;
 }
 

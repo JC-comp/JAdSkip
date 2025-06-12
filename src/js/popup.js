@@ -91,7 +91,10 @@ function setUpVersion() {
 function i18n() {
     document.querySelectorAll('[data-locale]').forEach(elem => {
         elem.innerHTML = chrome.i18n.getMessage(elem.dataset.locale)
-    })
+    });
+    document.querySelectorAll('[data-src-locale]').forEach(elem => {
+        elem.src = chrome.i18n.getMessage(elem.dataset.srcLocale);
+    });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -101,4 +104,16 @@ document.addEventListener("DOMContentLoaded", () => {
     setUpPage('yt');
     setUpPage('ytm');
     setUpDebugButton();
+});
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'onInstalled') {
+        sendResponse({ success: true });
+        var message = document.getElementById('message');
+        if (request.details.reason === 'install') {
+            message.innerHTML = chrome.i18n.getMessage('welcome_message');
+        } else if (request.details.reason === 'update') {
+            message.innerHTML = chrome.i18n.getMessage('update_success');
+        }
+    }
 });

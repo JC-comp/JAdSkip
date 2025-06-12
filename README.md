@@ -22,3 +22,7 @@ Features
 * Help you skip ads from Youtube Music
 * Help you click the Skip Ads buttons if possible
 * Manage ads by channels
+
+Related projects
+
+* <a href="https://music-player.jcomp.tk/" target="_blank">JC music player</a>: YouTube music adblocker on Android

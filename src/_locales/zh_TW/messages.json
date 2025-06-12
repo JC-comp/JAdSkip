@@ -40,5 +40,14 @@
     },
     "version": {
         "message": "版本"
+    },
+    "badge_code": {
+        "message": "../images/GetItOnGooglePlay_Badge_Web_color_Chinese-TW.png"
+    },
+    "update_success": {
+        "message": "太好了！擴充功能已成功更新"
+    },
+    "welcome_message": {
+        "message": "歡迎使用 JadSkip！<br>請停用其他廣告攔截器<br>並重新載入頁面"
     }
 }

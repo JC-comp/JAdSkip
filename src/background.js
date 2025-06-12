@@ -1,3 +1,23 @@
+chrome.runtime.onInstalled.addListener(function (details) {
+    chrome.action.openPopup().then(() => {
+        try {
+            chrome.runtime.sendMessage({
+                action: 'onInstalled',
+                details: details,
+            }, function (response) {
+                if (chrome.runtime.lastError) {
+                    console.log('Error sending message:', chrome.runtime.lastError);
+                }
+            });
+        } catch (error) {
+            console.log('Error sending message:', error);
+        }
+    }
+    ).catch(error => {
+        console.error('Error opening popup:', error);
+    });
+});
+
 function broadcastStatusUpdate(action, args) {
     // Broadcast a status update to all tabs
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
@@ -6,7 +26,7 @@ function broadcastStatusUpdate(action, args) {
                 action: action,
                 ...args,
             }, function (response) {
-                if (chrome.runtime.lastError) {}
+                if (chrome.runtime.lastError) { }
             });
         });
     });
@@ -128,6 +148,15 @@ function handleDebugModeUpdate(request, sender, sendResponse) {
     });
 }
 
+function handleOpenPopup(request, sender, sendResponse) {
+    // handle the open popup request
+    chrome.action.openPopup().then(() => {
+        sendResponse({ success: true });
+    }).catch(error => {
+        sendResponse({ success: false, error: error.message });
+    });
+}
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'isChannelSubscribed') {
         handleSubscriptionQuery(request, sender, sendResponse);
@@ -152,6 +181,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     } else if (request.action === 'updateDebugMode') {
         handleDebugModeUpdate(request, sender, sendResponse);
+        return true;
+    } else if (request.action === 'openPopup') {
+        handleOpenPopup(request, sender, sendResponse);
         return true;
     } else {
         sendResponse({ success: false, message: 'Unknown action' });

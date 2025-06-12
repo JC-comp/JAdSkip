@@ -40,5 +40,14 @@
     },
     "version": {
         "message": "Version"
+    },
+    "badge_code": {
+        "message": "../images/GetItOnGooglePlay_Badge_Web_color_English.png"
+    },
+    "update_success": {
+        "message": "Hurray! The extension has been updated successfully."
+    },
+    "welcome_message": {
+        "message": "Welcome to JadSkip!<br>Please disable other ad blockers<br>and reload the page."
     }
 }
