@@ -30,7 +30,7 @@ function updateSubscriptionToggle(injected, channelId) {
                     checkbox.checked = 1;
                     window.postMessage({
                         action: 'checkAds',
-                        origin: 'extension'
+                        origin: 'jad-extension'
                     });
                 }
             }

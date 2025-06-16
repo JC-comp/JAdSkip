@@ -63,7 +63,7 @@
     };
 
     window.addEventListener('message', async (event) => {
-        if (event.data.origin === 'main') return; // Ignore self-originated messages
+        if (event.data.origin !== 'jad-extension') return; // Ignore self-originated messages
         logMessage(`Received action: ${event.data.action}`);
         if (event.data.action === 'resetAdBlockState') {
             lastBlockedTime = 0;

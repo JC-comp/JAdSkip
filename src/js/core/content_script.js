@@ -6,7 +6,7 @@
     // Logger initialization
     var logger = new Logger();
     window.addEventListener('message', function (event) {
-        if (event.data.origin === 'extension') return; // Ignore self-originated messages
+        if (event.data.origin !== 'jad-main') return; // Ignore self-originated messages
         if (event.data.action === 'log') {
             logger.log(event.data.message);
         }
@@ -32,7 +32,7 @@
                 if (!response.shouldBlockAds) return;
                 window.postMessage({
                     action: 'checkAds',
-                    origin: 'extension'
+                    origin: 'jad-extension'
                 });
                 if (checkAdTimeout) clearTimeout(checkAdTimeout);
                 checkAdTimeout = setTimeout(() => {
@@ -60,7 +60,7 @@
                 if (!response.shouldBlockAds) return;
                 window.postMessage({
                     action: 'checkIdleInteraction',
-                    origin: 'extension'
+                    origin: 'jad-extension'
                 });
                 if (checkIdleTimeout) clearTimeout(checkIdleTimeout);
                 checkIdleTimeout = setTimeout(() => {
@@ -138,13 +138,13 @@
             if (getServiceName() === serviceName) {
                 window.postMessage({
                     action: 'setAdBlockEnabled',
-                    origin: 'extension',
+                    origin: 'jad-extension',
                     isEnabled: isEnabled
                 });
             }
             window.postMessage({
                 action: 'resetAdBlockState',
-                origin: 'extension'
+                origin: 'jad-extension'
             });
             checkAdPresence(0);
             sendResponse({ success: true });
@@ -174,7 +174,7 @@
                 if (response.success) {
                     window.postMessage({
                         action: 'setAdBlockEnabled',
-                        origin: 'extension',
+                        origin: 'jad-extension',
                         isEnabled: response.isEnabled
                     });
                 }

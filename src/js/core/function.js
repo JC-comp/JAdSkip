@@ -1,7 +1,7 @@
 const logMessage = (message) => {
     window.postMessage({
         action: 'log',
-        origin: 'main',
+        origin: 'jad-main',
         message: message
     });
 }
