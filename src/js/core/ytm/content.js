@@ -62,6 +62,50 @@
         button.click();
     };
 
+    // override XHR
+    var blockEnabled = false;
+    const originalSend = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.send = function (...args) {
+        const originalOnload = this.onload;
+        if (originalOnload) {
+            this.onload = function (...onloadArgs) {
+                try {
+                    var response = JSON.parse(this.response);
+                    if (response.adSlots) {
+                        logMessage(`Ad slots detected: ${response.adSlots.length}`);
+                        if (blockEnabled) {
+                            logMessage(`Removing adSlots response`);
+                            Object.defineProperty(this, 'response', {
+                                writable: true
+                            });
+                            delete response.adSlots;
+                            this.response = JSON.stringify(response);
+                        }
+                    }
+                    if (response.messages) {
+                        response.messages.forEach(message => {
+                            if (message.youThereRenderer) {
+                                logMessage('Youthere renderer detected');
+                                if (blockEnabled) {
+                                    logMessage(`Removing youthere renderer`);
+                                    Object.defineProperty(this, 'response', {
+                                        writable: true
+                                    });
+                                    delete message.youThereRenderer;
+                                    this.response = JSON.stringify(response);
+                                }
+                            }
+                        });
+                    }
+                } catch (e) {
+                    // Not a JSON response, continue as normal
+                }
+                return originalOnload.apply(this, onloadArgs);
+            }
+        }
+        return originalSend.apply(this, args);
+    }
+
     window.addEventListener('message', async (event) => {
         if (event.data.origin !== 'jad-extension') return; // Ignore self-originated messages
         logMessage(`Received action: ${event.data.action}`);
@@ -72,6 +116,8 @@
             await check_ads();
         } else if (event.data.action === 'checkIdleInteraction') {
             await checkIdle();
+        } else if (event.data.action === 'setAdBlockEnabled') {
+            blockEnabled = event.data.isEnabled;
         }
     });
 })();
