@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "__MSG_brand__",
-    "version": "3.1",
+    "version": "4.0",
     "description": "__MSG_brand_desc__",
     "default_locale": "en",
     "icons": {
@@ -45,6 +45,7 @@
             "js": [
                 "js/core/function.js",
                 "js/core/logger.js",
+                "js/core/yt/buffer.js",
                 "js/core/yt/content.js"
             ],
             "world": "MAIN",

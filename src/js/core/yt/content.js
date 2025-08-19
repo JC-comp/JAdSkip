@@ -1,19 +1,35 @@
 (function () {
-    var adSlots = [];
-    const tryClickSkipButton = async () => {
-        if (!getAdPlayer())
-            return;
+    const getMoviePlayer = async () => {
         var player = document.getElementById('movie_player');
         if (!player) {
             logMessage('Unable to find movie player');
             return;
         }
         if (player.getPlayerPromise) player = await player.getPlayerPromise();
+        return player;
+    }
+
+    const isPlayerLoading = async () => {
+        var player = await getMoviePlayer();
+        if (!player)
+            return false;
+        return player.getPlayerState() === -1;
+    }
+
+    // try clicking skip buttons
+    var adSlots = [];
+    const tryClickSkipButton = async () => {
+        if (!getAdPlayer())
+            return;
+        var player = await getMoviePlayer();
+        if (!player) {
+            return;
+        }
         if (!player.onAdUxClicked) {
             logMessage('Player does not support ad UX clicks');
             return;
         }
-        
+
         if (adSlots.length == 0) {
             logMessage('No ad slots captured yet');
         } else {
@@ -33,7 +49,58 @@
         });
     }
 
-    var lastBlockedTime = 0;
+    // reload video when hitting backoff
+    var currentBackoff = -1;
+    var lastBlockedBackoffUrl = '';
+    var retryBackoff = 0;
+    var backOffReloadTimeout = 0;
+    const reloadVideo = async () => {
+        backOffReloadTimeout = setTimeout(() => {
+            backOffReloadTimeout = 0;
+            logMessage('Reloading video due to backoff');
+            getMoviePlayer()
+                .then(player => {
+                    if (!player)
+                        return;
+                    const position = player.getCurrentTime();
+                    player.stopVideo();
+                    player.playVideo();
+                    if (position) {
+                        player.seekTo(position);
+                        logMessage('Restore position to ' + position);
+                    }
+                });
+        }, 1000);
+    }
+
+    const trySkipBackoff = async () => {
+        const playerLoading = await isPlayerLoading();
+        if (!playerLoading) {
+            logMessage('Player is not loading');
+            return;
+        }
+        if (currentBackoff <= 2000) {
+            logMessage('Not reloading due to backoff time: ' + currentBackoff);
+            return;
+        }
+        if (backOffReloadTimeout) {
+            logMessage('Not reloading due to already scheduled reload');
+            return;
+        }
+        if (window.location.href == lastBlockedBackoffUrl) {
+            if (retryBackoff++ > 1) {
+                logMessage(`Skipping already processed backoff`);
+                return;
+            }
+        } else {
+            lastBlockedBackoffUrl = window.location.href;
+            retryBackoff = 0;
+        }
+        logMessage(`Schedule reloading video due to backoff = ${currentBackoff}, retry = ${retryBackoff}`);
+        currentBackoff = -1;
+        reloadVideo();
+    }
+
     var lastBlockedAdURL = '';
     const trySkipAd = async () => {
         const player = getAdPlayer();
@@ -62,6 +129,7 @@
 
     const check_ads = async () => {
         await tryClickSkipButton();
+        await trySkipBackoff();
         await new Promise(resolve => setTimeout(resolve, 1000));
         await trySkipAd();
     }
@@ -121,6 +189,54 @@
             }
         }
         return originalSend.apply(this, args);
+    }
+    // override fetch
+    const originalFetch = window.fetch;
+    window.fetch = async function (...args) {
+        const playerLoading = await isPlayerLoading();
+        if (args.length !== 1 || !(args[0] instanceof Request) || !blockEnabled)
+            return originalFetch(...args);
+
+        const url = args[0].url;
+        if (url.includes("videoplayback") && playerLoading) {
+            return originalFetch(...args)
+                .then(async response => {
+                    if (response.headers.get('content-type') === 'application/vnd.yt-ump') {
+                        const reader = response.body.getReader();
+                        const chunks = [];
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+                            chunks.push(value);
+                        }
+                        let totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+                        let buffer = new Uint8Array(totalLength);
+                        let offset = 0;
+                        for (const chunk of chunks) {
+                            buffer.set(chunk, offset);
+                            offset += chunk.length;
+                        }
+                        if (totalLength < 300) {
+                            const backoffTime = findBackoffTime(buffer);
+                            if (backoffTime > 0) {
+                                currentBackoff = backoffTime;
+                                logMessage(`Updating backoff time = ${currentBackoff}`);
+                            }
+                        }
+                        const mockResponse = new Response(buffer, {
+                            status: response.status,
+                            statusText: response.statusText,
+                            headers: response.headers
+                        })
+                        Object.defineProperty(mockResponse, "type", { value: "basic" });
+                        Object.defineProperty(mockResponse, "url", { value: response.url });
+                        return mockResponse;
+                    }
+                    return response;
+                });
+        } else {
+            return originalFetch(...args);
+        }
     }
 
     window.addEventListener('message', async (event) => {

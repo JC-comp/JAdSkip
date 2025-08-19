@@ -1,21 +1,22 @@
 chrome.runtime.onInstalled.addListener(function (details) {
-    chrome.action.openPopup().then(() => {
-        try {
-            chrome.runtime.sendMessage({
-                action: 'onInstalled',
-                details: details,
-            }, function (response) {
-                if (chrome.runtime.lastError) {
-                    console.log('Error sending message:', chrome.runtime.lastError);
-                }
-            });
-        } catch (error) {
-            console.log('Error sending message:', error);
-        }
+    if (details.reason === 'install' || details.reason === 'update') {
+        chrome.action.openPopup().then(() => {
+            try {
+                chrome.runtime.sendMessage({
+                    action: 'onInstalled',
+                    details: details,
+                }, function (response) {
+                    if (chrome.runtime.lastError) {
+                        console.log('Error sending message:', chrome.runtime.lastError);
+                    }
+                });
+            } catch (error) {
+                console.log('Error sending message:', error);
+            }
+        }).catch(error => {
+            console.error('Error opening popup:', error);
+        });
     }
-    ).catch(error => {
-        console.error('Error opening popup:', error);
-    });
 });
 
 function broadcastStatusUpdate(action, args) {
