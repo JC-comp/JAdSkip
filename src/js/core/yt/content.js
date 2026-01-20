@@ -134,6 +134,33 @@
         await trySkipAd();
     }
 
+    const checkAdsContent = async () => {
+        const ads = document.querySelectorAll('ytd-browse #contents ytd-ad-slot-renderer');
+        logMessage(`Replacing ${ads.length} ad contents`);
+        ads.forEach(ad => {
+            const placeholder = document.createElement('h3');
+            placeholder.className = 'replaced-ads';
+            
+            const link = document.createElement('a');
+            link.className = 'replaced-ads-link';
+            link.textContent = 'JadSkip';
+
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                window.postMessage({
+                    action: 'openPopup',
+                    origin: 'jad-main'
+                });
+            });
+
+            placeholder.textContent = 'Ads removed by';
+            placeholder.appendChild(link);
+
+            // Replace the ad element with the placeholder
+            ad.parentNode.replaceChild(placeholder, ad);
+        });
+    }
+
     const checkIdle = async () => {
         var button = null;
         var buttons = document.querySelectorAll('#confirm-button');
@@ -241,12 +268,14 @@
 
     window.addEventListener('message', async (event) => {
         if (event.data.origin !== 'jad-extension') return; // Ignore self-originated messages
-        logMessage(`Received action: ${JSON.stringify(event.data)}`);
+        logMessage(`Received action from script: ${JSON.stringify(event.data)}`);
         if (event.data.action === 'resetAdBlockState') {
             lastBlockedTime = 0;
             lastBlockedAdURL = '';
         } else if (event.data.action === 'checkAds') {
             await check_ads();
+        } else if (event.data.action === 'checkAdsContent') {
+            await checkAdsContent();
         } else if (event.data.action === 'checkIdleInteraction') {
             await checkIdle();
         } else if (event.data.action === 'setAdBlockEnabled') {

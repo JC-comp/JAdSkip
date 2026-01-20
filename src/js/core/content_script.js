@@ -9,11 +9,23 @@
         if (event.data.origin !== 'jad-main') return; // Ignore self-originated messages
         if (event.data.action === 'log') {
             logger.log(event.data.message);
+            return;
+        }
+        logger.log(`Received action from main: ${JSON.stringify(event.data)}`);
+        if (event.data.action === 'openPopup') {
+            chrome.runtime.sendMessage({
+                action: 'openPopup'
+            }, function (response) {
+                if (chrome.runtime.lastError) {
+                    console.log('Failed to open popup:', chrome.runtime.lastError.message);
+                }
+            });
         }
     });
 
     // Operation functions
     var checkAdTimeout = null;
+    var checkAdContentTimeout = null;
     var checkIdleTimeout = null;
     function checkAdPresence(retry) {
         if (retry >= MAX_MUTATE_RETRY) return;
@@ -41,6 +53,34 @@
             });
         } catch (error) {
             logger.log(`Error checking ad presence: ${error.message}`);
+        }
+    }
+    function checkAdContentPresence(retry) {
+        if (retry >= MAX_MUTATE_RETRY) return;
+        try {
+            chrome.runtime.sendMessage({
+                action: 'shouldBlockAds',
+                serviceName: getServiceName(),
+                channelId: getChannelId()
+            }, function (response) {
+                if (chrome.runtime.lastError) {
+                    logger.error(`Error checking ad presence: ${chrome.runtime.lastError.message}`);
+                    return;
+                }
+                logger.log(`Checking ad content presence, retry: ${retry}, shouldBlockAds: ${JSON.stringify(response)}`);
+                if (!response.success) return;
+                if (!response.shouldBlockAds) return;
+                window.postMessage({
+                    action: 'checkAdsContent',
+                    origin: 'jad-extension'
+                });
+                if (checkAdContentTimeout) clearTimeout(checkAdContentTimeout);
+                checkAdContentTimeout = setTimeout(() => {
+                    checkAdContentPresence(retry + 1);
+                }, MUTATE_INTERVAL);
+            });
+        } catch (error) {
+            logger.log(`Error checking ad content presence: ${error.message}`);
         }
     }
     const checkIdleInteraction = (retry) => {
@@ -121,12 +161,57 @@
         videoRegistrationTimeout = setTimeout(registerVideoListener, 1000);
     }
 
+    var contentFilterRegistrationTimeout = null;
+    var deBouncedContentFilter = null;
+    const contentCallback = (mutationList, observer) => {
+        if (deBouncedContentFilter === null) {
+            logger.log(`Fire first content filter`);
+            checkAdContentPresence(0);
+            deBouncedContentFilter = 0;
+        } else {
+            logger.log(`debounced filter for 1 seconds`);
+            clearTimeout(deBouncedContentFilter);
+            deBouncedContentFilter = setTimeout(() => {
+                checkAdContentPresence(0);
+                deBouncedContentFilter = null;
+            }, 1000);
+        }
+    };
+    function _registerContentListener(contentHolder) {
+        const observer = new MutationObserver(contentCallback);
+        const config = { attributes: true, childList: true, subtree: true };
+        if (contentHolder.getAttribute(SKIPPED_TAG_NAME) == 1) {
+            logger.log(`Content holder already registered`);
+            return;
+        }
+        contentHolder.setAttribute(SKIPPED_TAG_NAME, 1);
+        observer.observe(contentHolder, config);
+        checkAdContentPresence(0);
+    }
+    function registerContentListener() {
+        let contentHolder = document.querySelector('ytd-browse #contents')
+        if (contentHolder != null) {
+            logger.log(`Contents found in, registering listener`);
+            _registerContentListener(contentHolder);
+            return;
+        }
+        if (contentFilterRegistrationTimeout)
+            clearTimeout(contentFilterRegistrationTimeout);
+        contentFilterRegistrationTimeout = setTimeout(registerContentListener, 1000);
+    }
     // Page change detection
     function onNavigate() {
         logger.log('Page navigation detected, re-registering video listener');
         if (videoRegistrationTimeout)
             clearTimeout(videoRegistrationTimeout);
         registerVideoListener();
+        if (contentFilterRegistrationTimeout)
+            clearTimeout(contentFilterRegistrationTimeout);
+        registerContentListener();
+    }
+    function onTriggerDetection() {
+        checkAdPresence(0);
+        checkAdContentPresence(0);
     }
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (
@@ -146,7 +231,7 @@
                 action: 'resetAdBlockState',
                 origin: 'jad-extension'
             });
-            checkAdPresence(0);
+            onTriggerDetection();
             sendResponse({ success: true });
             return true;
         } else if (request.action === 'copyDebugLog') {
@@ -158,13 +243,13 @@
     });
     if (window.navigation && window.navigation.addEventListener) {
         window.navigation.addEventListener('navigate', onNavigate);
-        onNavigate();
     } else {
         window.addEventListener('locationchange', onNavigate);
         window.addEventListener('yt-navigate-finish', onNavigate);
     }
 
     // Initial registration
+    onNavigate();
     try {
         chrome.runtime.sendMessage({
             action: 'isServiceEnabled',

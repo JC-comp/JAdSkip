@@ -1,0 +1,11 @@
+.replaced-ads {
+    color: #f1f1f1;
+    margin: auto;
+    user-select: none;
+}
+
+.replaced-ads-link {
+    cursor: pointer;
+    color: rgb(62, 166, 255);
+    margin-left: 5px;
+}
