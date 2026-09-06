@@ -261,6 +261,30 @@
                     }
                     return response;
                 });
+        } else if (url.includes("ad_break")){
+            return originalFetch(...args)
+                .then(async response => {
+                    try {
+                        const json = await response.json();
+                        if ('adThrottled' in json) {
+                            logMessage(`Ad throttling response detected by fetch: ${json.adThrottled}`); 
+                            if (!json.adThrottled) {
+                                logMessage(`Replacing ad throttling response`);
+                                json.adThrottled = true;
+                                response = new Response(JSON.stringify(json), {
+                                    status: response.status,
+                                    statusText: response.statusText,
+                                    headers: response.headers
+                                });
+                                Object.defineProperty(response, "type", { value: "basic" });
+                                Object.defineProperty(response, "url", { value: response.url });
+                            }
+                        }
+                    } catch (e) {
+                        // Not a JSON response, continue as normal
+                    }
+                    return response;
+                });
         } else {
             return originalFetch(...args);
         }
