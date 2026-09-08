@@ -140,7 +140,7 @@
         ads.forEach(ad => {
             const placeholder = document.createElement('h3');
             placeholder.className = 'replaced-ads';
-            
+
             const link = document.createElement('a');
             link.className = 'replaced-ads-link';
             link.textContent = 'JadSkip';
@@ -261,29 +261,35 @@
                     }
                     return response;
                 });
-        } else if (url.includes("ad_break")){
+        } else if (url.includes("ad_break")) {
             return originalFetch(...args)
                 .then(async response => {
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType.startsWith('application/json')) {
+                        logMessage(`Skipping non-JSON ad_break response: ${contentType}`);
+                        return response;
+                    }
+                    
+                    const json = await response.json();
                     try {
-                        const json = await response.json();
                         if ('adThrottled' in json) {
-                            logMessage(`Ad throttling response detected by fetch: ${json.adThrottled}`); 
+                            logMessage(`Ad throttling response detected by fetch: ${json.adThrottled}`);
                             if (!json.adThrottled) {
                                 logMessage(`Replacing ad throttling response`);
                                 json.adThrottled = true;
-                                response = new Response(JSON.stringify(json), {
-                                    status: response.status,
-                                    statusText: response.statusText,
-                                    headers: response.headers
-                                });
-                                Object.defineProperty(response, "type", { value: "basic" });
-                                Object.defineProperty(response, "url", { value: response.url });
                             }
                         }
                     } catch (e) {
                         // Not a JSON response, continue as normal
                     }
-                    return response;
+                    const mockResponse = new Response(JSON.stringify(json), {
+                        status: response.status,
+                        statusText: response.statusText,
+                        headers: response.headers
+                    });
+                    Object.defineProperty(mockResponse, "type", { value: "basic" });
+                    Object.defineProperty(mockResponse, "url", { value: response.url });
+                    return mockResponse;
                 });
         } else {
             return originalFetch(...args);

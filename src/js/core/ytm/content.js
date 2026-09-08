@@ -106,6 +106,47 @@
         return originalSend.apply(this, args);
     }
 
+    // override fetch
+    const originalFetch = window.fetch;
+    window.fetch = async function (...args) {
+        if (args.length !== 1 || !(args[0] instanceof Request) || !blockEnabled)
+            return originalFetch(...args);
+
+        const url = args[0].url;
+        if (url.includes("player")) {
+            return originalFetch(...args)
+                .then(async response => {
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType.startsWith('application/json')) {
+                        logMessage(`Skipping non-JSON player response: ${contentType}`);
+                        return response;
+                    }
+                    const json = await response.json();
+                    try {
+                        if (json.adSlots) {
+                            logMessage(`Ad slots detected by fetch: ${json.adSlots.length}`);
+                            if (blockEnabled) {
+                                logMessage(`Removing adSlots response`);
+                                delete json.adSlots;
+                            }
+                        }
+                    } catch (e) {
+                        // Not a JSON response, continue as normal
+                    }
+                    const mockResponse = new Response(JSON.stringify(json), {
+                        status: response.status,
+                        statusText: response.statusText,
+                        headers: response.headers
+                    });
+                    Object.defineProperty(mockResponse, "type", { value: "basic" });
+                    Object.defineProperty(mockResponse, "url", { value: response.url });
+                    return mockResponse;
+                })
+        } else {
+            return originalFetch(...args);
+        }
+    }
+
     window.addEventListener('message', async (event) => {
         if (event.data.origin !== 'jad-extension') return; // Ignore self-originated messages
         logMessage(`Received action: ${event.data.action}`);
