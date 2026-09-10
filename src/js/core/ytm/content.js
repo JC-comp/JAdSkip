@@ -130,6 +130,17 @@
                                 delete json.adSlots;
                             }
                         }
+                        if (json.messages) {
+                            json.messages.forEach(message => {
+                                if (message.youThereRenderer) {
+                                    logMessage('Youthere renderer detected');
+                                    if (blockEnabled) {
+                                        logMessage(`Removing youthere renderer`);
+                                        delete message.youThereRenderer;
+                                    }
+                                }
+                            });
+                        }
                     } catch (e) {
                         // Not a JSON response, continue as normal
                     }
